@@ -9,6 +9,34 @@ const app = express();
 
 app.use(express.json());
 
+function authMiddleware(req, res, next) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        return res.status(401).json({
+            error: "Authorization header missing"
+        });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json({
+            error: "Token missing"
+        });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({
+            error: "Invalid token"
+        });
+    }
+}
+
 // Проверка работы сервера
 app.get("/", (req, res) => {
     res.json({
@@ -119,6 +147,12 @@ app.post("/login", async (req, res) => {
             error: "Login error"
         });
     }
+});
+
+app.get("/profile", authMiddleware, (req, res) => {
+    res.json({
+        user: req.user
+    });
 });
 
 app.listen(3000, () => {
