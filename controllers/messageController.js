@@ -52,6 +52,15 @@ const result = await pool.query(
     [currentUserId, otherUserId]
 );
 
+await pool.query(
+    `UPDATE messages
+     SET is_read = TRUE
+     WHERE sender_id = $1
+     AND receiver_id = $2
+     AND is_read = FALSE`,
+    [otherUserId, currentUserId]
+);
+
         res.json(result.rows);
     } catch (error) {
         console.error("Get messages error:", error);
@@ -66,23 +75,31 @@ async function getDialogs(req, res) {
     try {
         const currentUserId = req.user.id;
 
-        const result = await pool.query(
-            `SELECT DISTINCT ON (u.id)
-                u.id,
-                u.login,
-                u.role,
-                m.text AS last_message,
-                m.created_at AS last_message_time
-             FROM messages m
-             JOIN users u
-                ON u.id = CASE
-                    WHEN m.sender_id = $1 THEN m.receiver_id
-                    ELSE m.sender_id
-                END
-             WHERE m.sender_id = $1 OR m.receiver_id = $1
-             ORDER BY u.id, m.created_at DESC`,
-            [currentUserId]
-        );
+const result = await pool.query(
+    `SELECT DISTINCT ON (u.id)
+        u.id,
+        u.login,
+        u.role,
+        m.text AS last_message,
+        m.created_at AS last_message_time,
+        (
+            SELECT COUNT(*)
+            FROM messages unread
+            WHERE unread.sender_id = u.id
+            AND unread.receiver_id = $1
+            AND unread.is_read = FALSE
+            AND unread.is_deleted = FALSE
+        ) AS unread_count
+     FROM messages m
+     JOIN users u
+        ON u.id = CASE
+            WHEN m.sender_id = $1 THEN m.receiver_id
+            ELSE m.sender_id
+        END
+     WHERE m.sender_id = $1 OR m.receiver_id = $1
+     ORDER BY u.id, m.created_at DESC`,
+    [currentUserId]
+);
 
         res.json(result.rows);
     } catch (error) {
