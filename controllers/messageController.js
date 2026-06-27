@@ -58,17 +58,20 @@ async function getDialogs(req, res) {
         const currentUserId = req.user.id;
 
         const result = await pool.query(
-            `SELECT DISTINCT
+            `SELECT DISTINCT ON (u.id)
                 u.id,
                 u.login,
-                u.role
+                u.role,
+                m.text AS last_message,
+                m.created_at AS last_message_time
              FROM messages m
              JOIN users u
                 ON u.id = CASE
                     WHEN m.sender_id = $1 THEN m.receiver_id
                     ELSE m.sender_id
                 END
-             WHERE m.sender_id = $1 OR m.receiver_id = $1`,
+             WHERE m.sender_id = $1 OR m.receiver_id = $1
+             ORDER BY u.id, m.created_at DESC`,
             [currentUserId]
         );
 
