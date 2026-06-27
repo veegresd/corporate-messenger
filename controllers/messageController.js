@@ -32,16 +32,25 @@ async function getMessages(req, res) {
         const currentUserId = req.user.id;
         const otherUserId = req.params.userId;
 
-        const result = await pool.query(
-            `SELECT *
-             FROM messages
-             WHERE
-             (sender_id = $1 AND receiver_id = $2)
-             OR
-             (sender_id = $2 AND receiver_id = $1)
-             ORDER BY created_at`,
-            [currentUserId, otherUserId]
-        );
+const result = await pool.query(
+    `SELECT
+        id,
+        sender_id,
+        receiver_id,
+        CASE
+            WHEN is_deleted = TRUE THEN 'Сообщение удалено'
+            ELSE text
+        END AS text,
+        created_at,
+        is_deleted
+     FROM messages
+     WHERE
+     (sender_id = $1 AND receiver_id = $2)
+     OR
+     (sender_id = $2 AND receiver_id = $1)
+     ORDER BY created_at`,
+    [currentUserId, otherUserId]
+);
 
         res.json(result.rows);
     } catch (error) {
@@ -85,8 +94,52 @@ async function getDialogs(req, res) {
     }
 }
 
+async function deleteMessage(req, res) {
+    try {
+        const messageId = req.params.id;
+        const currentUserId = req.user.id;
+        const currentUserRole = req.user.role;
+
+        const messageResult = await pool.query(
+            "SELECT * FROM messages WHERE id = $1",
+            [messageId]
+        );
+
+        if (messageResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Message not found"
+            });
+        }
+
+        const message = messageResult.rows[0];
+
+        if (message.sender_id !== currentUserId && currentUserRole !== "admin") {
+            return res.status(403).json({
+                error: "You cannot delete this message"
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE messages
+             SET is_deleted = TRUE
+             WHERE id = $1
+             RETURNING *`,
+            [messageId]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Delete message error:", error);
+
+        res.status(500).json({
+            error: "Delete message error"
+        });
+    }
+}
+
 module.exports = {
     createMessage,
     getMessages,
-    getDialogs
+    getDialogs,
+    deleteMessage
 };
