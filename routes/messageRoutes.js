@@ -4,10 +4,11 @@ const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const {
     createMessage,
-    getMessages
+    getMessages,
+    getDialogs
 } = require("../controllers/messageController");
 
 router.post("/messages", authMiddleware, createMessage);
-router.get("/messages/:userId", authMiddleware, getMessages);
+router.get("/dialogs", authMiddleware, getDialogs);
 
 module.exports = router;

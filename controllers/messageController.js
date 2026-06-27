@@ -53,7 +53,37 @@ async function getMessages(req, res) {
     }
 }
 
+async function getDialogs(req, res) {
+    try {
+        const currentUserId = req.user.id;
+
+        const result = await pool.query(
+            `SELECT DISTINCT
+                u.id,
+                u.login,
+                u.role
+             FROM messages m
+             JOIN users u
+                ON u.id = CASE
+                    WHEN m.sender_id = $1 THEN m.receiver_id
+                    ELSE m.sender_id
+                END
+             WHERE m.sender_id = $1 OR m.receiver_id = $1`,
+            [currentUserId]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Get dialogs error:", error);
+
+        res.status(500).json({
+            error: "Get dialogs error"
+        });
+    }
+}
+
 module.exports = {
     createMessage,
-    getMessages
+    getMessages,
+    getDialogs
 };
