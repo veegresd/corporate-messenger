@@ -6,11 +6,13 @@ const {
     createMessage,
     getMessages,
     getDialogs,
-    deleteMessage
+    deleteMessage,
+    editMessage
 } = require("../controllers/messageController");
 
 router.post("/messages", authMiddleware, createMessage);
 router.get("/dialogs", authMiddleware, getDialogs);
 router.delete("/messages/:id", authMiddleware, deleteMessage);
 router.get("/messages/:userId", authMiddleware, getMessages);
+router.patch("/messages/:id", authMiddleware, editMessage);
 module.exports = router;

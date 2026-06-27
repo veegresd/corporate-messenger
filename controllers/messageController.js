@@ -137,9 +137,65 @@ async function deleteMessage(req, res) {
     }
 }
 
+async function editMessage(req, res) {
+    try {
+        const messageId = req.params.id;
+        const currentUserId = req.user.id;
+        const { text } = req.body;
+
+        if (!text) {
+            return res.status(400).json({
+                error: "Text is required"
+            });
+        }
+
+        const messageResult = await pool.query(
+            "SELECT * FROM messages WHERE id = $1",
+            [messageId]
+        );
+
+        if (messageResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Message not found"
+            });
+        }
+
+        const message = messageResult.rows[0];
+
+        if (message.sender_id !== currentUserId) {
+            return res.status(403).json({
+                error: "You cannot edit this message"
+            });
+        }
+
+        if (message.is_deleted) {
+            return res.status(400).json({
+                error: "Cannot edit deleted message"
+            });
+        }
+
+        const result = await pool.query(
+            `UPDATE messages
+             SET text = $1, edited_at = CURRENT_TIMESTAMP
+             WHERE id = $2
+             RETURNING *`,
+            [text, messageId]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Edit message error:", error);
+
+        res.status(500).json({
+            error: "Edit message error"
+        });
+    }
+}
+
 module.exports = {
     createMessage,
     getMessages,
     getDialogs,
-    deleteMessage
+    deleteMessage,
+    editMessage
 };
