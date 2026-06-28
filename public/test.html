@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Socket Test</title>
+</head>
+<body>
+    <h1>Socket.IO Test</h1>
+
+    <input id="userId" placeholder="User ID">
+    <button onclick="connectUser()">Connect</button>
+
+    <h2>Messages:</h2>
+    <ul id="messages"></ul>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        const socket = io();
+
+        function connectUser() {
+            const userId =
+                document.getElementById("userId").value;
+
+            socket.emit("join", userId);
+
+            console.log("Connected as user", userId);
+        }
+
+        socket.on("new_message", (message) => {
+            const li = document.createElement("li");
+
+            li.textContent =
+                `From ${message.sender_id}: ${message.text}`;
+
+            document
+                .getElementById("messages")
+                .appendChild(li);
+        });
+    </script>
+</body>
+</html>

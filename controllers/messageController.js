@@ -17,7 +17,20 @@ async function createMessage(req, res) {
             [req.user.id, receiver_id, text]
         );
 
-        res.status(201).json(result.rows[0]);
+        const newMessage = result.rows[0];
+
+        const receiverSocketId =
+            req.onlineUsers.get(Number(receiver_id));
+
+        if (receiverSocketId) {
+            req.io.to(receiverSocketId).emit(
+                "new_message",
+                newMessage
+            );
+        }
+
+        res.status(201).json(newMessage);
+
     } catch (error) {
         console.error("Create message error:", error);
 
