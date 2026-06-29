@@ -222,6 +222,31 @@ async function editMessage(req, res) {
     }
 }
 
+async function getUserStatus(req, res) {
+    try {
+        const userId = Number(req.params.userId);
+
+        const isOnline =
+            req.onlineUsers.has(userId);
+
+        const lastSeen =
+            req.lastSeen?.get(userId) || null;
+
+        res.json({
+            userId,
+            online: isOnline,
+            lastSeen
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Status error"
+        });
+    }
+}
+
 module.exports = {
     createMessage,
     getMessages,

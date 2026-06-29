@@ -4,15 +4,14 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
-const pool = require("./config/db");
 const authMiddleware = require("./middleware/authMiddleware");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const statusRoutes = require("./routes/statusRoutes");
 
 const app = express();
-
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -21,35 +20,37 @@ const io = new Server(server, {
     }
 });
 
+const onlineUsers = new Map();
+const lastSeen = new Map();
+
 app.use(express.json());
 app.use(express.static("public"));
 
-app.use(authRoutes);
-app.use(userRoutes);
 app.use((req, res, next) => {
     req.io = io;
     req.onlineUsers = onlineUsers;
+    req.lastSeen = lastSeen;
     next();
 });
 
+app.use(authRoutes);
+app.use(userRoutes);
 app.use(messageRoutes);
+app.use(statusRoutes);
 
-const onlineUsers = new Map();
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
     socket.on("join", (userId) => {
         onlineUsers.set(Number(userId), socket.id);
-
-        console.log(
-            `User ${userId} connected with socket ${socket.id}`
-        );
+        console.log(`User ${userId} connected with socket ${socket.id}`);
     });
 
     socket.on("disconnect", () => {
         for (const [userId, socketId] of onlineUsers.entries()) {
             if (socketId === socket.id) {
                 onlineUsers.delete(userId);
+                lastSeen.set(userId, new Date());
                 break;
             }
         }
